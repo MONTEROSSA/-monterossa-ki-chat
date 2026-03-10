@@ -1,0 +1,142 @@
+// Prisma Schema for Monterossa KI-Chat (PostgreSQL for Vercel)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// Knowledge Base Items
+model KnowledgeItem {
+  id          String   @id @default(cuid())
+  type        String   // "link", "file", "image", "video", "text"
+  title       String
+  content     String?  @db.Text
+  url         String?
+  fileName    String?
+  fileSize    Int?
+  mimeType    String?
+  category    String?
+  tags        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("knowledge_items")
+}
+
+// Chat Messages
+model Message {
+  id               String   @id @default(cuid())
+  sessionId        String
+  role             String   // "user", "assistant"
+  content          String   @db.Text
+  rating           Int?     // 1-5 stars
+  ratingComment    String?
+  hasAttachment    Boolean  @default(false)
+  attachmentUrl    String?
+  attachmentName   String?
+  isVoiceMessage   Boolean  @default(false)
+  voiceMessageUrl  String?
+  knowledgeUsed    String?  // IDs of knowledge items used
+  improved         Boolean  @default(false) // If AI learned from this
+  createdAt        DateTime @default(now())
+  
+  @@map("messages")
+}
+
+// Chat Sessions
+model ChatSession {
+  id             String    @id @default(cuid())
+  visitorId      String?
+  userAgent      String?
+  ipAddress      String?
+  country        String?
+  transferred    Boolean   @default(false)
+  transferReason String?
+  feedbackLeft   Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  endedAt        DateTime?
+  
+  @@map("chat_sessions")
+}
+
+// Human Handoff Requests
+model HumanHandoff {
+  id             String    @id @default(cuid())
+  sessionId      String
+  reason         String    @db.Text
+  status         String    @default("pending") // pending, contacted, resolved
+  customerName   String?
+  customerEmail  String?
+  customerPhone  String?
+  message        String?   @db.Text
+  voiceNoteUrl   String?
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+  
+  @@map("human_handoffs")
+}
+
+// Chat Settings
+model ChatSettings {
+  id              String   @id @default(cuid())
+  welcomeMessage  String   @db.Text
+  companyName     String   @default("Monterossa AG")
+  primaryColor    String   @default("#22d3bb")
+  accentColor     String   @default("#f97316")
+  transferEnabled Boolean  @default(true)
+  transferEmail   String?
+  transferPhone   String?
+  updatedAt       DateTime @updatedAt
+  
+  @@map("chat_settings")
+}
+
+// Daily Statistics
+model DailyStats {
+  id              String   @id @default(cuid())
+  date            DateTime @db.Date
+  totalSessions   Int      @default(0)
+  totalMessages   Int      @default(0)
+  avgRating       Float?
+  positiveRatings Int      @default(0)
+  negativeRatings Int      @default(0)
+  transfers       Int      @default(0)
+  topQuestions    String?  @db.Text // JSON string
+  createdAt       DateTime @default(now())
+  
+  @@unique([date])
+  @@map("daily_stats")
+}
+
+// FAQ Learning - Most asked questions
+model FAQItem {
+  id           String   @id @default(cuid())
+  question     String   @db.Text
+  answer       String   @db.Text
+  frequency    Int      @default(1)
+  avgRating    Float?
+  lastAsked    DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("faq_items")
+}
+
+// AI Learning from feedback
+model AILearning {
+  id             String   @id @default(cuid())
+  question       String   @db.Text
+  originalAnswer String   @db.Text
+  improvedAnswer String?  @db.Text
+  rating         Int?
+  incorporated   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  
+  @@map("ai_learnings")
+}
